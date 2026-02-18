@@ -1,0 +1,46 @@
+
+
+import prisma from "../libs/prismadb";
+import getCurrentUser from "./getCurrentUser";
+
+
+export default async function getUserImages() {
+  try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      return [];
+    }
+    const owner_id = currentUser.id
+    let userNames
+
+    
+      //admin can view all
+      userNames = await prisma.user.findMany({
+        // where: {
+        //   active:true,
+        // },
+        orderBy: { email: "asc" },
+        // include: {
+        //   lists: {
+        //     include: {
+        //       cards: true,
+        //     },
+        //   },
+        //   user:true,
+        // },
+      });
+//  console.log('hhhh',tagNames)
+     if (userNames) {
+        const result = userNames?.map(x=>({label:x.image,value:x.id}))
+        return result;
+     }else{
+        return []
+     }
+   } catch (error: unknown) {
+    // Log the error for internal tracking on the Beef Platform
+    console.error("GET_USERIMAGES_ERROR:", error);
+    
+    // Return an empty array or throw a specific string to avoid crashing the UI
+    throw new Error("Failed to fetch userImages");
+  }
+}

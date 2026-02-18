@@ -1,0 +1,657 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                      String       @id @default(auto()) @map("_id") @db.ObjectId
+  name                    String?
+  email                   String?      @unique
+  emailVerified           DateTime?
+  image                   String?
+  hashedPassword          String?
+  createdAt               DateTime     @default(now())
+  updatedAt               DateTime     @updatedAt
+  favoriteIds             String[]     @db.ObjectId
+  taggedInboxIds          String[]     @db.ObjectId
+  isAdmin                 Boolean      @default(false)
+  cardReadMode            Boolean      @default(true)
+  showBGImage             Boolean      @default(false)
+  cardYscroll             Boolean      @default(true)
+  cardShowTitle           Boolean      @default(true)
+  roles                   String[]
+  pageSize                Int          @default(8)
+  recentDays              Int          @default(7)
+  notificationToaster     Boolean      @default(true)
+  showMobileView          Boolean      @default(true)
+  togglePendingTasksOrAll Boolean      @default(true)
+  toggleRecentTaskorAll   Boolean      @default(true)
+  toggleOverdueorAll      Boolean      @default(false)
+  toggleInverse           Boolean      @default(false)
+  toggleInverseTable      Boolean      @default(false)
+  emptyListShow           Boolean      @default(false)
+  showMyProjectsOnLoad    Boolean      @default(true)
+  collapseBoards          Boolean      @default(true)
+  accounts                Account[]
+  boards                  Board[]
+  lists                   List[]
+  cards                   Card[]
+  cardImages              CardImage[]
+  taggedCards             CardToUser[]
+  comments                Comment[]
+  boardIds                String[]     @db.ObjectId
+  boadViews               BoardView[]  @relation(fields: [boardIds], references: [id])
+
+ 
+}
+
+model Account {
+  id                String  @id @default(auto()) @map("_id") @db.ObjectId
+  userId            String  @db.ObjectId
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.String
+  access_token      String? @db.String
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.String
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Board {
+  id            String      @id @default(auto()) @map("_id") @db.ObjectId
+  orgId         String?
+  title         String
+  imageId       String      @db.String
+  imageThumbUrl String      @db.String
+  imageFullUrl  String      @db.String
+  imageUserName String      @db.String
+  imageLinkHTML String      @db.String
+  lists         List[]
+  views         BoardView[]
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  active         Boolean  @default(true)
+  public         Boolean  @default(false)
+  userId         String?  @db.ObjectId
+  percent        Int      @default(0)
+  progressStatus String   @default("no value given")
+  dragMode       Boolean  @default(true)
+  user           User?    @relation(fields: [userId], references: [id], onDelete: Cascade) // onDelete: Cascade here
+}
+
+model List {
+  id    String @id @default(auto()) @map("_id") @db.ObjectId
+  title String
+  order Int
+
+  boardId String //  @db.ObjectId //added to remove swiggles...
+  board   Board  @relation(fields: [boardId], references: [id], onDelete: Cascade)
+
+  cards Card[]
+
+  visible   Boolean  @default(true) //some cards carry senstivity information, user need to protect it
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  active    Boolean  @default(true)
+  userId    String   @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  percent   Int      @default(0)
+
+  @@index([boardId])
+  @@index([userId])
+}
+
+model Card {
+  id            String       @id @default(auto()) @map("_id") @db.ObjectId
+  title         String
+  order         Int
+  description   String?      @db.String
+  progress      String       @default("not_started") @db.String
+  listId        String // @db.ObjectId//added to remove swiggles.....
+  list          List         @relation(fields: [listId], references: [id], onDelete: Cascade)
+  visible       Boolean      @default(false) //some cards carry senstivity information, user need to protect it
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  active        Boolean      @default(true)
+  userId        String       @db.ObjectId
+  dueDate       DateTime?
+  completedDate DateTime?
+  tagIDs        String[]     @db.ObjectId
+  tags          Tag[]        @relation(fields: [tagIDs], references: [id])
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  taggedUsers   CardToUser[]
+  comments      Comment[]
+  cardImages    CardImage[] // Store URLs or IDs of the images
+
+  viewCount Int? @default(0)
+
+  @@index([listId])
+  @@index([userId])
+  @@index([tagIDs])
+}
+
+model CardImage {
+  id     String  @id @default(auto()) @map("_id") @db.ObjectId
+  cardId String  @db.ObjectId
+  url    String
+  card   Card    @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  type   String  @default("image")
+  userId String? @db.ObjectId
+  user   User?   @relation(fields: [userId], references: [id], onDelete: Cascade) // onDelete: Cascade here
+
+  description String?
+  fileName    String?
+  createdAt   DateTime? @default(now())
+  order       Float     @default(0.0) // Using Float for flexible reordering (LexoRank/Fractional Indexing)
+
+  viewCount  Int? @default(0)
+  shareCount Int? @default(0)
+
+  @@index([cardId])
+}
+
+model CardToUser {
+  id        String  @id @default(auto()) @map("_id") @db.ObjectId
+  cardId    String  @db.ObjectId
+  card      Card    @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  userId    String  @db.ObjectId
+  userEmail String? // copy for ready search overheads
+  //user        User @relation(fields: [userId], references: [id])   
+  user      User?   @relation(fields: [userId], references: [id], onDelete: Cascade) // onDelete: Cascade here
+
+  @@index([cardId, userId])
+}
+
+model Tag {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  name        String // @unique 
+  description String?  @db.String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  cardIDs     String[] @db.ObjectId
+  cards       Card[]   @relation(fields: [cardIDs], references: [id])
+
+  @@unique([name])
+}
+
+model Comment {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  cardId        String   @db.ObjectId
+  comment       String?  @db.String
+  imageThumbUrl String? //copy duplicate to reduce fetch overheads
+  ownerEmail    String? // copy to reduce overheads
+  card          Card     @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  userId        String   @db.ObjectId
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([cardId])
+  @@index([userId])
+}
+
+
+model Enquiry {
+  id                String            @id @default(auto()) @map("_id") @db.ObjectId
+  first_name        String? 
+  last_name         String? 
+  email             String
+  phone_number      String?
+  company           String?           // Added to match UI
+  message           String
+  active            Boolean           @default(true)
+  isRead            Boolean           @default(false)
+  category          String[]          @default([]) 
+  inquiryType       String            @default("general") // partnership, investment, services, general
+  
+  // --- Investment Specific Data ---
+  pledgeAmount      Float?            // The numerical value for financial analysis
+  paymentStructure  String?           // upfront, monthly, quarterly, periodic
+  targetPaymentDate DateTime?         // When the money can be paid
+  
+  // --- Partnership / Model Selection (Guideline 1 of 2025) ---
+  operationalSynergy String?          // Resources and market reach details
+  
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  status            String            @default("active") 
+  scheduledDeleteAt DateTime?
+  admin_notes       String?
+  
+  // Relationships (Optional: If you want to track status changes over time)
+  auditLog           EnquiryLog[]
+  investments        Investment[]
+  payments           Payment[]
+}
+
+model Investment {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  amount    Float
+  enquiryId String   @db.ObjectId
+  enquiry   Enquiry  @relation(fields: [enquiryId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+model Payment {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  amount    Float
+  enquiryId String   @db.ObjectId
+  enquiry   Enquiry  @relation(fields: [enquiryId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+model EnquiryLog {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  enquiryId   String   @db.ObjectId
+  action      String   
+  performedBy String  
+  timestamp   DateTime @default(now())
+  enquiry     Enquiry  @relation(fields: [enquiryId], references: [id])
+}
+
+// -----------------------------------------------------------------------------
+// ENUMS
+// -----------------------------------------------------------------------------
+
+enum PenStatus {
+  STARTING
+  GROWING
+  FINISHING
+  MARKET_READY
+}
+
+enum SaleType {
+  LIVE     // Sold based on live weight (on-the-hoof)
+  CARCASS  // Sold based on hanging/slaughter weight (on-the-rail)
+}
+
+enum FeedTransactionType {
+  PURCHASE    // "Stock In" - Increases inventory levels
+  CONSUMPTION // "Stock Out" - Decreases inventory via daily feeding
+  ADJUSTMENT  // Corrections for spills, spoilage, or weighing errors
+}
+
+// -----------------------------------------------------------------------------
+// CORE INFRASTRUCTURE (Pens & Programs)
+// -----------------------------------------------------------------------------
+
+model Pen {
+  id              String      @id @default(auto()) @map("_id") @db.ObjectId
+  penNumber       String      @unique
+  capacity        Int         @default(50)
+  headCount       Int         @default(0)
+  daysOnFeed      Int         @default(0)
+  feedStartDate   DateTime?   
+  adg             Float?      // Average Daily Gain calculated for the whole pen
+  status          PenStatus   @default(STARTING)
+  
+  // Relations
+  cattle          Cattle[]    // Animals currently physically in this pen
+  feedLogs        FeedLog[]   // History of feed dropped in this pen
+  updatedAt       DateTime    @updatedAt
+}
+
+model FeedProgram {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  name        String   // e.g., "Starter Ration", "Finisher 2"
+  dayRange    String   // e.g., "0-30"
+  proteinPct  String   
+  energyNeg   String   
+  colorCode   String   // UI helper for dashboard charts
+}
+
+// -----------------------------------------------------------------------------
+// THE ANIMAL RECORD (Cattle & History)
+// -----------------------------------------------------------------------------
+
+model Cattle {
+  id              String         @id @default(auto()) @map("_id") @db.ObjectId
+  tagNumber       String         @unique // Physical Ear Tag ID
+  breed           String?
+  gender          String?        
+  ageMonths       Int?           
+  
+  // Weight Tracking
+  entryWeight     Float          // Weight at intake (kg)
+  currentWeight   Float          // Last recorded weight (kg)
+  entryDate       DateTime       @default(now())
+  
+  // Status Flags
+  isSold          Boolean        @default(false)
+  isDeceased      Boolean        @default(false)
+
+  // Relations
+  penId           String?        @db.ObjectId
+  pen             Pen?           @relation(fields: [penId], references: [id])
+  
+  sourceId        String         @db.ObjectId
+  source          Source         @relation(fields: [sourceId], references: [id]) 
+  
+  saleId          String?        @db.ObjectId
+  sale            Sale?          @relation(fields: [saleId], references: [id])
+
+  weightLogs      WeightLog[]    // Historical weighing events
+  movements       MovementLog[]  // History of pen transfers
+  medicalRecords  MedicalRecord[]
+  mortality       Mortality?     // Present only if isDeceased is true
+}
+
+// -----------------------------------------------------------------------------
+// HEALTH, LOGISTICS & COMPLIANCE
+// -----------------------------------------------------------------------------
+
+model Source {
+  id                  String    @id @default(auto()) @map("_id") @db.ObjectId
+  sellerName          String    // Ranch or Auction name
+  purchasePricePerHead Float    
+  purchaseDate        DateTime  @default(now())
+  
+  // Compliance
+  vetName             String?   // Clearing veterinarian
+  movementDocRef      String?   // Legal permit numbers
+  diseaseChecked      String[]  // e.g., ["BVD", "FMD"]
+  initialHealthStatus String?
+  isInternal          Boolean   @default(false) // Home-grown vs Purchased
+  
+  cattle              Cattle[]
+}
+
+model MedicalRecord {
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  date            DateTime @default(now())
+  treatment       String   // e.g., "Antibiotic X", "Vitamin B12"
+  dosage          String   
+  cost            Float    
+  withdrawalDays  Int      // Days until meat is safe for human consumption
+  administeredBy  String
+  
+  cattleId        String   @db.ObjectId
+  cattle          Cattle   @relation(fields: [cattleId], references: [id])
+}
+
+model Mortality {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  date       DateTime @default(now())
+  cause      String   
+  notes      String?
+  
+  cattleId   String   @unique @db.ObjectId
+  cattle     Cattle   @relation(fields: [cattleId], references: [id])
+}
+
+model MovementLog {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  movedAt     DateTime @default(now())
+  fromPenId   String?  @db.ObjectId
+  toPenId     String   @db.ObjectId
+  reason      String?  
+  
+  cattleId    String   @db.ObjectId
+  cattle      Cattle   @relation(fields: [cattleId], references: [id])
+}
+
+model WeightLog {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  date      DateTime @default(now())
+  weight    Float
+  
+  cattleId  String   @db.ObjectId
+  cattle    Cattle   @relation(fields: [cattleId], references: [id])
+}
+
+// -----------------------------------------------------------------------------
+// FEEDING & INVENTORY MANAGEMENT
+// -----------------------------------------------------------------------------
+
+model FeedInventory {
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  ingredientName  String   @unique // e.g., "Silage", "Corn"
+  currentStockKg  Float    @default(0)
+  reorderLevelKg  Float    @default(1000)
+  averageUnitCost Float    @default(0)    // Weighted average to calculate gain cost
+  
+  transactions    FeedTransaction[]
+}
+
+model FeedTransaction {
+  id              String              @id @default(auto()) @map("_id") @db.ObjectId
+  date            DateTime            @default(now())
+  type            FeedTransactionType
+  quantityKg      Float               // Pos/Neg based on type
+  unitCost        Float?              // Price paid per KG during PURCHASE
+  totalCost       Float?              
+  
+  inventoryId     String              @db.ObjectId
+  inventory       FeedInventory       @relation(fields: [inventoryId], references: [id])
+}
+
+model FeedLog {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  date        DateTime @default(now())
+  amountKg    Float    // Total weight of feed dropped in the bunk
+  
+  penId       String   @db.ObjectId
+  pen         Pen      @relation(fields: [penId], references: [id])
+}
+
+// -----------------------------------------------------------------------------
+// SALES & ENVIRONMENTAL DATA
+// -----------------------------------------------------------------------------
+
+model Sale {
+  id              String    @id @default(auto()) @map("_id") @db.ObjectId
+  saleDate        DateTime  @default(now())
+  saleType        SaleType  @default(LIVE)
+  buyerName       String    
+  
+  totalAmount     Float     // Total revenue
+  pricePerKg      Float?    
+  commission      Float?    @default(0)
+  transportCost   Float?    @default(0)
+  
+  isAggregate     Boolean   @default(false) 
+  totalWeight     Float?    // Combined weight of batch
+  carcassWeight   Float?    // Only used for SaleType.CARCASS
+  grade           String?   // e.g., "Prime", "Choice"
+  
+  cattle          Cattle[]
+}
+
+model EnvironmentalLog {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  timestamp   DateTime @default(now())
+  temperature Float    // Celsius or Fahrenheit
+  humidity    Float    
+}
+model ProductEnquiry {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  first_name   String? //copy duplicate to reduce fetch overheads
+  last_name    String? // copy to reduce overheads
+  email        String
+  phone_number String?
+  message      String
+  active       Boolean  @default(true)
+  isRead       Boolean  @default(false)
+  demoproducts String[] @default([]) // Added default empty array
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model InvestmentPortfolio {
+  id             String               @id @default(auto()) @map("_id") @db.ObjectId
+  title          String
+  description    String
+  type           String
+  country        String
+  active         Boolean              @default(true)
+  targetAmount   Int
+  raisedAmount   Int                  @default(0)
+  imageUrl       String
+  expectedReturn String?
+  investments    InvestorInvestment[] // Removed onDelete here
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+}
+
+model Investor {
+  id          String               @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  country     String
+  email       String
+  active      Boolean              @default(true)
+  investments InvestorInvestment[] // Removed onDelete here
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+}
+
+model InvestorInvestment {
+  id          String              @id @default(auto()) @map("_id") @db.ObjectId
+  investor    Investor            @relation(fields: [investorId], references: [id])
+  investorId  String              @db.ObjectId
+  portfolio   InvestmentPortfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade) // Keep onDelete here
+  portfolioId String              @db.ObjectId
+  amount      Int
+  active      Boolean             @default(true)
+  investedAt  DateTime            @default(now())
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  @@index([investorId])
+  @@index([portfolioId])
+}
+
+model BoardView {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  boardId   String   @db.ObjectId
+  board     Board    @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  viewCount Int?     @default(0)
+  // 0n 21 January 2025 Test the code if there are multiple user per boardView but none
+  userID    String[] @db.ObjectId
+  users     User[]   @relation(fields: [userID], references: [id])
+
+  @@index([boardId])
+}
+
+enum ACTION {
+  CREATE
+  UPDATE
+  DELETE
+}
+
+enum ENTITY_TYPE {
+  INVESTOR
+  PORTFOLIO
+  ENQUIRY
+  BOARD
+  LIST
+  CARD
+  ASSET
+  WORKORDER
+}
+
+model AuditLog {
+  id          String      @id @default(auto()) @map("_id") @db.ObjectId
+  orgId       String
+  action      ACTION
+  entityId    String
+  entityType  ENTITY_TYPE
+  entityTitle String
+  userId      String?
+  userImage   String      @db.String
+  userName    String      @db.String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model OrgLimit {
+  id    String @id @default(auto()) @map("_id") @db.ObjectId
+  orgId String @unique
+  count Int    @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model OrgSubscription {
+  id                     String    @id @default(auto()) @map("_id") @db.ObjectId
+  orgId                  String    @unique
+  stripeCustomerId       String?   @unique @map(name: "stripe_customer_id")
+  stripeSubscriptionId   String?   @unique @map(name: "stripe_subscription_id")
+  stripePriceId          String?   @map(name: "stripe_price_id")
+  stripeCurrentPeriodEnd DateTime? @map(name: "stripe_current_period_end")
+}
+
+// Define enums for specific fields
+enum MembershipCategory {
+  ORDINARY
+  SILVER
+  GOLD
+}
+
+enum Sex {
+  MALE
+  FEMALE
+  NON_BINARY
+  PREFER_NOT_TO_SAY
+}
+
+model Membership {
+  id                     String             @id @default(auto()) @map("_id") @db.ObjectId
+  // userId             String             @db.ObjectId // Commented out as per your input
+  userEmail              String             @unique // Added @unique to prevent duplicate entries
+  // user               User?              @relation(fields: [userId], references: [id], onDelete: Cascade) // Commented out as per your input
+  lastName               String
+  firstName              String
+  membershipCategory     MembershipCategory
+  sex                    Sex
+  country                String?
+  profession             String?
+  age                    Int?
+  nextOfKin              String? // Changed to String for simplicity
+  interests              String? //[]
+  //paymentDetails     Json? // Use Json to store structured data like fees and payment status
+  memberExpectations     String?
+  pledge                 String?
+  shares                 Int?
+  experienceOrBackground String? // Added new field for experience or background
+  role                   String?
+  subcommittees          String[] // New field: Array of strings for subcommittees
+  teamCode               String?
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+}
+
+
+
+model Visit {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  visitorId  String? // Now optional. Use String? to allow null in MongoDB.
+  locationId String? //@db.ObjectId
+  // location   Location  @relation(fields: [locationId], references: [id])
+  timestamp  DateTime @default(now())
+  ipAddress  String // New field to store the visitor's IP address
+  notes      String?
+
+  // You might consider a unique constraint for authenticated users, 
+  // but for the daily IP check, the query check is better.
+
+  @@index([ipAddress, timestamp]) // Index for fast daily lookups
+}
