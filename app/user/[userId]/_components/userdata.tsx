@@ -1,7 +1,7 @@
 "use client";
 
 import { toast } from "sonner";
-import { AlignLeft, Settings, UserCheck, Shield } from "lucide-react"; // Added new icons
+import { AlignLeft, Settings, UserCheck, Shield, TrendingUp, ChevronRight } from "lucide-react"; // Added new icons
 import { redirect, useParams } from "next/navigation";
 import { useState, useRef, ElementRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -312,6 +312,20 @@ export const UserData = ({
                 Name: 
                 <span className="font-normal text-blue-600 ml-2">{data.name}</span>
               </label>
+
+                {/* NEW LINK TO INVESTOR REGISTRY */}
+                {isCurrentLogInUserRecord && (
+                  <div className="mt-2 pt-2 border-t border-neutral-200">
+                    <Link 
+                      href={`/u/${currentUser.id}`}
+                      className="group flex items-center gap-x-2 text-sm font-bold text-[#C1663E] hover:text-[#1A2F23] transition-colors"
+                    >
+                      <TrendingUp className="w-4 h-4" />
+                      View My Investor Registry & Pledges
+                      <ChevronRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
+                    </Link>
+                  </div>
+                )}
             </div>
             
             <Separator className="my-3"/>

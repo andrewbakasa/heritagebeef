@@ -5,7 +5,7 @@ import { List, Search, ArrowUpRight, ExternalLink, Filter, Wallet, TrendingUp, L
 import { ClientInvestDetails } from './InvestorClient';
 import { useRouter } from 'next/navigation';
 
-export default function EnquiriesClientWrapper({ initialData }: { initialData: any[] }) {
+export default function EnquiriesClientWrapper({ initialData, isAllowedPayment }: { initialData: any[], isAllowedPayment:boolean }) {
   const [enquiries, setEnquiries] = useState(initialData);
   const [selectedInquiry, setSelectedInquiry] = useState<any | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -153,7 +153,8 @@ export default function EnquiriesClientWrapper({ initialData }: { initialData: a
                 <button 
                   onClick={(e) => {
                     e.stopPropagation();
-                    router.push(`/private/enquiry/${enquiry.id}`);
+                    //router.push(`/private/enquiry/${enquiry.id}`);
+                    router.push(`/private/enquiry/${enquiry.id}?allowPayment=${isAllowedPayment}`);
                   }}
                   className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-50 hover:bg-gray-100 text-gray-600 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
                 >
@@ -192,6 +193,7 @@ export default function EnquiriesClientWrapper({ initialData }: { initialData: a
             selectedInquiry={selectedInquiry}
             onClose={() => setSelectedInquiry(null)}
             onUpdate={handleUpdateNotes}
+            isAllowedPayment={true}
           />
         </>
       )}

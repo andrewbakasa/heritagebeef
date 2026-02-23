@@ -1,27 +1,32 @@
 "use client";
 
 import React, { useState } from 'react';
-import { DollarSign, ArrowUpRight, CreditCard, X, Loader2 } from 'lucide-react';
+import { DollarSign, ArrowUpRight, CreditCard, X, Loader2, Lock } from 'lucide-react';
+import { toast } from 'sonner';
 
 type TransactionType = 'investment' | 'payment';
 
 export const TransactionForm = ({ 
   enquiryId, 
   onSuccess, 
-  onClose 
+  onClose,
+  isAllowedPayment 
 }: { 
   enquiryId: string; 
   onSuccess: () => void; 
   onClose: () => void;
+  isAllowedPayment: boolean; // Optional prop to control access
 }) => {
   const [amount, setAmount] = useState('');
   const [type, setType] = useState<TransactionType>('investment');
   const [loading, setLoading] = useState(false);
+  //toast.message(isAllowedPayment)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (type === 'payment' && !isAllowedPayment) return; // Guard clause
     setLoading(true);
-
+    
     try {
       const response = await fetch(`/api/enquiries/${enquiryId}/transactions`, {
         method: 'POST',
@@ -53,18 +58,28 @@ export const TransactionForm = ({
       <form onSubmit={handleSubmit} className="space-y-5">
         {/* Toggle between Investment and Payment */}
         <div className="flex p-1 bg-gray-50 rounded-2xl border border-gray-100">
-          {(['investment', 'payment'] as TransactionType[]).map((t) => (
-            <button
-              key={t}
-              type="button"
-              onClick={() => setType(t)}
-              className={`flex-1 py-2 text-[10px] font-bold uppercase rounded-xl transition-all ${
-                type === t ? 'bg-[#1A2F23] text-white shadow-lg' : 'text-gray-400'
-              }`}
-            >
-              {t}
-            </button>
-          ))}
+          {(['investment', 'payment'] as TransactionType[]).map((t) => {
+            const isDisabled = t === 'payment' && !isAllowedPayment;
+            
+            return (
+              <button
+                key={t}
+                type="button"
+                disabled={isDisabled}
+                onClick={() => setType(t)}
+                className={`flex-1 py-2 text-[10px] font-bold uppercase rounded-xl transition-all flex items-center justify-center gap-1 ${
+                  type === t 
+                    ? 'bg-[#1A2F23] text-white shadow-lg' 
+                    : isDisabled 
+                      ? 'text-gray-300 cursor-not-allowed opacity-60' 
+                      : 'text-gray-400 hover:text-gray-600'
+                }`}
+              >
+                {isDisabled && <Lock className="w-3 h-3" />}
+                {t}
+              </button>
+            );
+          })}
         </div>
 
         {/* Amount Input */}

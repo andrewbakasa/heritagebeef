@@ -7,8 +7,6 @@ import {
   AlertCircle, Plus, ArrowUpRight, CreditCard, Loader2 
 } from 'lucide-react';
 import { TransactionForm } from './_components/TranscationForm';
-//import { TransactionForm } from './TransactionForm'; // The component we just built
-
 // --- Types ---
 interface Investment {
   id: string;
@@ -40,9 +38,11 @@ interface Inquiry {
 export const ClientInvestDetails = ({ 
   selectedInquiry, 
   onClose, 
-  onUpdate 
+  onUpdate, 
+  isAllowedPayment,
 }: { 
   selectedInquiry: Inquiry; 
+  isAllowedPayment:boolean;
   onClose: () => void;
   onUpdate: (id: string, notes: string) => Promise<void>;
 }) => {
@@ -249,6 +249,7 @@ export const ClientInvestDetails = ({
             enquiryId={selectedInquiry.id} 
             onClose={() => setShowTxForm(false)}
             onSuccess={() => window.location.reload()} // Simplified refresh for data consistency
+            isAllowedPayment={isAllowedPayment}
           />
         </div>
       )}

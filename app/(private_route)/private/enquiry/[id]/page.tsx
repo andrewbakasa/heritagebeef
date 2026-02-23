@@ -2,9 +2,19 @@ import prisma from "@/app/libs/prismadb";
 import { notFound } from "next/navigation";
 import ClientRegistryPage from "./UserClient";
 
-export default async function RegistryEntry({ params }: { params: { id: string } }) {
-  const { id } = params;
+//export default async function RegistryEntry({ params }: { params: { id: string } }) {
 
+export default async function RegistryEntry({ 
+  params, 
+  searchParams 
+}: { 
+  params: { id: string },
+  searchParams: { allowPayment?: string } // Capture the query string
+}) {
+
+  const { id } = params;
+// Convert string "true" to boolean
+  const isAllowedPayment = searchParams.allowPayment === "true";
   // Fetching the inquiry with all relations needed for the Ledger
   const inquiry = await prisma.enquiry.findUnique({
     where: { id },
@@ -30,8 +40,9 @@ export default async function RegistryEntry({ params }: { params: { id: string }
 
   return (
     <ClientRegistryPage 
-      selectedInquiry={JSON.parse(JSON.stringify(inquiry))} 
-      onUpdate={updateNotesAction}
-    />
+      selectedInquiry={JSON.parse(JSON.stringify(inquiry))}
+      onUpdate={updateNotesAction} 
+      isAllowedPayment={isAllowedPayment} // Pass it here
+     />
   );
 }

@@ -13,10 +13,12 @@ import { useRouter } from 'next/navigation';
 
 export default function ClientRegistryPage({ 
   selectedInquiry, 
-  onUpdate 
+  onUpdate,
+  isAllowedPayment
 }: { 
   selectedInquiry: any; 
   onUpdate: (id: string, notes: string) => Promise<void>;
+  isAllowedPayment:boolean
 }) {
   const [activeTab, setActiveTab] = useState<'details' | 'history'>('details');
   const [notes, setNotes] = useState(selectedInquiry.admin_notes || '');
@@ -184,7 +186,10 @@ export default function ClientRegistryPage({
                                 </div>
                                 <div>
                                     <p className="text-xs font-bold text-gray-800">{item.type}</p>
-                                    <p className="text-[9px] text-gray-400 font-mono">{new Date(item.createdAt).toLocaleDateString()}</p>
+                                   
+                                    <p className="text-[9px] text-gray-400 font-mono">
+                                      {new Date(item.createdAt).toLocaleDateString('en-GB')} 
+                                    </p>
                                 </div>
                             </div>
                             <span className={`font-mono font-bold text-sm ${item.type === 'Payment' ? 'text-blue-600' : 'text-green-700'}`}>
@@ -248,6 +253,7 @@ export default function ClientRegistryPage({
             enquiryId={selectedInquiry.id} 
             onClose={() => setShowTxForm(false)}
             onSuccess={() => window.location.reload()}
+            isAllowedPayment={isAllowedPayment}
           />
         </div>
       )}
